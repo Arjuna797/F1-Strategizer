@@ -14,8 +14,8 @@ class F1Predictor {
         this.predictedTimeElement = document.getElementById('predictedTime');
 
         // Button states
-        this.btnText = this.predictBtn.querySelector('.btn-text');
-        this.btnLoader = this.predictBtn.querySelector('.btn-loader');
+        this.btnText = this.predictBtn?.querySelector('.btn-text');
+        this.btnLoader = this.predictBtn?.querySelector('.btn-loader');
 
         // Slider configuration with defaults
         this.sliderConfig = {
@@ -33,7 +33,8 @@ class F1Predictor {
         Object.keys(this.sliderConfig).forEach(name => {
             const input = document.getElementById(name);
             const valueDisplay = document.getElementById(`${name}_value`);
-            const trackFill = input.closest('.parameter-group').querySelector('.slider-track-fill');
+            const parameterGroup = input?.closest('.parameter-group');
+            const trackFill = parameterGroup?.querySelector('.slider-track-fill');
 
             if (input && valueDisplay && trackFill) {
                 this.sliders[name] = {
@@ -76,15 +77,14 @@ class F1Predictor {
         Object.keys(this.sliders).forEach(name => {
             const slider = this.sliders[name];
             if (slider && slider.input) {
-                // Use multiple event types for better compatibility
                 slider.input.addEventListener('input', () => this.updateSlider(name));
                 slider.input.addEventListener('change', () => this.updateSlider(name));
                 slider.input.addEventListener('mousemove', () => this.updateSlider(name));
-                slider.input.addEventListener('touchmove',() => this.updateSlider(name),{passive:true});
+                slider.input.addEventListener('touchmove', () => this.updateSlider(name), {passive: true});
             }
         });
 
-        // Add keyboard navigation
+        // Keyboard navigation
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && e.ctrlKey) {
                 e.preventDefault();
@@ -98,11 +98,9 @@ class F1Predictor {
     }
 
     initializeSliders() {
-        // Set initial values and update displays
         Object.keys(this.sliderConfig).forEach(name => {
             const config = this.sliderConfig[name];
             const slider = this.sliders[name];
-
             if (slider && slider.input) {
                 slider.input.value = config.default;
                 this.updateSlider(name);
@@ -113,20 +111,55 @@ class F1Predictor {
     updateSlider(name) {
         const config = this.sliderConfig[name];
         const slider = this.sliders[name];
-
+        
         if (!config || !slider || !slider.input || !slider.valueDisplay || !slider.trackFill) {
             return;
         }
 
         const value = parseFloat(slider.input.value);
-
-        // Update value display
         const formattedValue = value.toFixed(config.decimals);
         slider.valueDisplay.textContent = `${formattedValue}${config.unit}`;
 
-        // Update track fill
         const percentage = ((value - config.min) / (config.max - config.min)) * 100;
         slider.trackFill.style.width = `${Math.max(0, Math.min(100, percentage))}%`;
+    }
+
+    resetValues() {
+        Object.keys(this.sliders).forEach(name => {
+            const config = this.sliderConfig[name];
+            const slider = this.sliders[name];
+            if (slider && slider.input && config) {
+                slider.input.value = config.default;
+                this.updateSlider(name);
+            }
+        });
+        
+        // Hide results section
+        if (this.resultsSection) {
+            this.resultsSection.classList.add('hidden');
+        }
+        
+        // Remove podium section if exists
+        const podiumSection = document.getElementById('podiumResultsSection');
+        if (podiumSection) {
+            podiumSection.remove();
+        }
+    }
+
+    setLoadingState(loading) {
+        if (this.predictBtn) {
+            this.predictBtn.disabled = loading;
+            this.predictBtn.classList.toggle('loading', loading);
+        }
+        
+        if (this.btnText && this.btnLoader) {
+            this.btnText.style.display = loading ? 'none' : 'block';
+            this.btnLoader.style.display = loading ? 'block' : 'none';
+        }
+    }
+
+    async delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
     }
 
     async handlePredict(e) {
@@ -134,25 +167,20 @@ class F1Predictor {
             e.preventDefault();
         }
 
-        // Show loading state
         this.setLoadingState(true);
 
         try {
-            // Get form data
             const formData = this.getFormData();
-
-            // Simulate API call delay for realistic UX
-            await this.delay(1500);
-
-            // Get prediction (simulate ML model)
-            const prediction = await this.simulateMLPrediction(formData);
-            console.log("PREDICTION:")
-            console.log(prediction)
-            // Display results
+            console.log('🚀 Sending prediction data:', formData);
+            
+            await this.delay(800); // Realistic loading time
+            
+            const prediction = await this.callMLPrediction(formData);
+            console.log('✅ Received prediction:', prediction);
+            
             this.displayResults(prediction);
-
         } catch (error) {
-            console.log('Prediction error:', error);
+            console.error('❌ Prediction error:', error);
             this.showError('Failed to predict lap time. Please try again.');
         } finally {
             this.setLoadingState(false);
@@ -169,277 +197,210 @@ class F1Predictor {
         return data;
     }
 
-    async simulateMLPrediction(data) {
-        // Make the POST request and await the response JSON
-        const response = await fetch('/predict', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        });
-        
-        const responseData = await response.json();
-        console.log('Predicted lap time:', responseData);
-    
-        const lapTime = responseData.predicted_lap_time;
-        // const confidence = responseData.confidence;
-        // const factors = this.getInfluencingFactors(responseData);
-    
-        const result = {
-            lapTime
-        };
-    
-        // Return the result object directly
-        return result;
-    }
-    
+    async callMLPrediction(data) {
+        try {
+            const response = await fetch('/predict', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
 
-    getInfluencingFactors(data) {
-        const factors = [];
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
 
-        if (data.rain_probability > 30) {
-            factors.push('High rain probability increasing lap time');
-        }
-        if (data.team_performance > 0.8) {
-            factors.push('Strong team performance advantage');
-        }
-        if (data.temperature > 30) {
-            factors.push('High temperature affecting tire performance');
-        }
-        if (data.clean_air_pace < 92) {
-            factors.push('Excellent clean air pace');
-        }
+            const responseData = await response.json();
+            
+            if (!responseData.success) {
+                throw new Error(responseData.error || 'Prediction failed');
+            }
 
-        return factors;
+            return {
+                lapTime: responseData.predicted_lap_time,
+                confidence: responseData.confidence,
+                podium: responseData.podium || [],
+                allPredictions: responseData.all_predictions || []
+            };
+        } catch (error) {
+            console.error('🔥 API call failed:', error);
+            throw error;
+        }
     }
 
     async displayResults(prediction) {
         if (!this.predictedTimeElement || !this.resultsSection) {
+            console.error('❌ Results elements not found');
             return;
         }
 
-        // Format lap time
-        const formattedTime = parseFloat(prediction.lapTime).toFixed(2);
-        
-        console.log("prediction",prediction.lapTime)
+        // Format and display lap time
+        const formattedTime = parseFloat(prediction.lapTime).toFixed(3);
         this.predictedTimeElement.textContent = `${formattedTime}s`;
+
+        // Display podium if available
+        if (prediction.podium && prediction.podium.length >= 3) {
+            console.log('🏆 Displaying podium:', prediction.podium);
+            this.displayPodiumResults(prediction.podium);
+        }
 
         // Show results section
         this.resultsSection.classList.remove('hidden');
 
-        // Scroll to results smoothly
+        // Scroll to results
         setTimeout(() => {
             this.resultsSection.scrollIntoView({
                 behavior: 'smooth',
                 block: 'center'
             });
-        }, 200);
+        }, 300);
     }
 
-    resetValues() {
-        // Reset all sliders to default values
-        Object.keys(this.sliderConfig).forEach(name => {
-            const config = this.sliderConfig[name];
-            const slider = this.sliders[name];
-
-            if (slider && slider.input) {
-                slider.input.value = config.default;
-                this.updateSlider(name);
-            }
-        });
-
-        // Hide results
-        if (this.resultsSection) {
-            this.resultsSection.classList.add('hidden');
+    displayPodiumResults(podium) {
+        console.log('🏁 Creating podium display for:', podium);
+        
+        // Remove existing podium section if it exists
+        const existingPodium = document.getElementById('podiumResultsSection');
+        if (existingPodium) {
+            existingPodium.remove();
         }
 
-        // Add visual feedback
-        if (this.resetBtn) {
-            this.resetBtn.style.transform = 'scale(0.95)';
-            setTimeout(() => {
-                this.resetBtn.style.transform = 'scale(1)';
-            }, 150);
-        }
-
-        // Scroll back to top of form
-        if (this.form) {
-            this.form.scrollIntoView({
-                behavior: 'smooth',
-                block: 'start'
-            });
-        }
-    }
-
-    setLoadingState(loading) {
-        if (!this.predictBtn || !this.btnText || !this.btnLoader) {
-            return;
-        }
-
-        if (loading) {
-            this.predictBtn.disabled = true;
-            this.btnText.style.opacity = '0';
-            this.btnLoader.classList.remove('hidden');
-            this.predictBtn.style.cursor = 'not-allowed';
+        // Create new podium section
+        const podiumSection = this.createPodiumSection(podium);
+        
+        // Insert podium section before results
+        const resultsSection = document.getElementById('resultsSection');
+        if (resultsSection && resultsSection.parentNode) {
+            resultsSection.parentNode.insertBefore(podiumSection, resultsSection);
         } else {
-            this.predictBtn.disabled = false;
-            this.btnText.style.opacity = '1';
-            this.btnLoader.classList.add('hidden');
-            this.predictBtn.style.cursor = 'pointer';
+            // Fallback: append to main container
+            const mainContainer = document.querySelector('.prediction-container') || 
+                                 document.querySelector('main') || 
+                                 document.body;
+            mainContainer.appendChild(podiumSection);
         }
+
+        // Animate podium appearance
+        setTimeout(() => {
+            podiumSection.classList.add('visible');
+        }, 100);
+    }
+
+    createPodiumSection(podium) {
+        const section = document.createElement('div');
+        section.id = 'podiumResultsSection';
+        section.className = 'podium-results-container';
+        
+        const top3 = podium.slice(0, 3);
+        const positionClasses = ['first', 'second', 'third'];
+        const positionNumbers = ['1', '2', '3'];
+        const medals = ['🥇', '🥈', '🥉'];
+
+        section.innerHTML = `
+            <div class="podium-results-title">
+                🏆 RACE PODIUM PREDICTION
+            </div>
+            <div class="podium-list">
+                ${top3.map((driver, index) => `
+                    <div class="podium-item ${positionClasses[index]}" data-position="${index + 1}">
+                        <div class="podium-position">${positionNumbers[index]}</div>
+                        <div class="podium-info">
+                            <div class="podium-driver">${driver.driver}</div>
+                            <div class="podium-team">${driver.team}</div>
+                            <div class="podium-time">${this.formatLapTime(driver.predicted_time)}</div>
+                        </div>
+                        <div class="podium-stats">
+                            <div class="podium-confidence">${driver.confidence}%</div>
+                            <div class="confidence-badge">${medals[index]}</div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+            <div class="podium-footer">
+                <p>🎯 ML-powered predictions based on current race conditions</p>
+            </div>
+        `;
+
+        return section;
+    }
+
+    formatLapTime(seconds) {
+        return `${parseFloat(seconds).toFixed(3)}s`;
     }
 
     showError(message) {
-        // Create error notification
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'error-notification';
-        errorDiv.textContent = message;
-        errorDiv.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: linear-gradient(135deg, #e10600, #ff4444);
-            color: white;
-            padding: 16px 24px;
-            border-radius: 8px;
-            box-shadow: 0 8px 32px rgba(225, 6, 0, 0.3);
-            z-index: 1000;
-            font-family: 'Rajdhani', sans-serif;
-            font-weight: 600;
-            transform: translateX(100%);
-            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-        `;
-
-        document.body.appendChild(errorDiv);
-
-        // Animate in
-        setTimeout(() => {
-            errorDiv.style.transform = 'translateX(0)';
-        }, 100);
-
-        // Remove after delay
-        setTimeout(() => {
-            errorDiv.style.transform = 'translateX(100%)';
-            setTimeout(() => {
-                if (errorDiv.parentNode) {
-                    document.body.removeChild(errorDiv);
-                }
-            }, 300);
-        }, 4000);
-    }
-
-    delay(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
-    }
-}
-
-// Enhanced visual effects
-class VisualEffects {
-    constructor() {
-        this.initializeEffects();
-    }
-
-    initializeEffects() {
-        // Add subtle parallax to racing grid
-        this.setupParallax();
-
-        // Add glow effects on hover
-        this.setupGlowEffects();
-
-        // Add racing stripe animations
-        this.setupRacingStripes();
-    }
-
-    setupParallax() {
-        const grid = document.querySelector('.racing-grid');
-        if (!grid) return;
-
-        let ticking = false;
-
-        function updateParallax() {
-            const scrolled = window.pageYOffset;
-            const rate = scrolled * -0.5;
-            grid.style.transform = `translate3d(0, ${rate}px, 0)`;
-            ticking = false;
-        }
-
-        function requestTick() {
-            if (!ticking) {
-                requestAnimationFrame(updateParallax);
-                ticking = true;
+        // Create or update error display
+        let errorDiv = document.getElementById('errorMessage');
+        if (!errorDiv) {
+            errorDiv = document.createElement('div');
+            errorDiv.id = 'errorMessage';
+            errorDiv.className = 'error-message';
+            
+            const resultsSection = document.getElementById('resultsSection');
+            if (resultsSection && resultsSection.parentNode) {
+                resultsSection.parentNode.insertBefore(errorDiv, resultsSection);
             }
         }
-
-        window.addEventListener('scroll', requestTick);
+        
+        errorDiv.innerHTML = `
+            <div class="error-content">
+                <h3>⚠️ Prediction Error</h3>
+                <p>${message}</p>
+                <button onclick="this.parentElement.parentElement.remove()" class="error-close">Close</button>
+            </div>
+        `;
+        
+        errorDiv.style.display = 'block';
+        
+        // Auto-hide error after 5 seconds
+        setTimeout(() => {
+            if (errorDiv && errorDiv.parentNode) {
+                errorDiv.remove();
+            }
+        }, 5000);
     }
 
-    setupGlowEffects() {
-        const glowElements = document.querySelectorAll('.btn, .parameter-group, .results-card');
-
-        glowElements.forEach(element => {
-            element.addEventListener('mouseenter', function () {
-                this.style.filter = 'drop-shadow(0 0 20px rgba(255, 215, 0, 0.3))';
-            });
-
-            element.addEventListener('mouseleave', function () {
-                this.style.filter = 'none';
-            });
+    animatePodiumAppearance(podiumSection) {
+        const items = podiumSection.querySelectorAll('.podium-item');
+        items.forEach((item, index) => {
+            setTimeout(() => {
+                item.style.opacity = '0';
+                item.style.transform = 'translateY(30px)';
+                item.style.transition = 'all 0.6s ease';
+                
+                setTimeout(() => {
+                    item.style.opacity = '1';
+                    item.style.transform = 'translateY(0)';
+                }, 50);
+            }, index * 150);
         });
     }
+}
 
-    setupRacingStripes() {
-        // Add animated racing stripes to buttons
-        const buttons = document.querySelectorAll('.btn--primary');
+// Visual Effects Class (for fancy animations)
+class VisualEffects {
+    constructor() {
+        this.initializeParticles();
+        this.setupBackgroundAnimation();
+    }
 
-        buttons.forEach(button => {
-            button.addEventListener('mouseenter', function () {
-                if (!this.querySelector('.racing-stripes')) {
-                    const stripes = document.createElement('div');
-                    stripes.className = 'racing-stripes';
-                    stripes.style.cssText = `
-                        position: absolute;
-                        top: 0;
-                        left: -100%;
-                        width: 100%;
-                        height: 100%;
-                        background: linear-gradient(
-                            45deg,
-                            transparent 30%,
-                            rgba(255, 255, 255, 0.1) 50%,
-                            transparent 70%
-                        );
-                        animation: stripeMove 1.5s ease-in-out;
-                        pointer-events: none;
-                    `;
-                    this.appendChild(stripes);
+    initializeParticles() {
+        console.log('✨ Visual effects initialized');
+    }
 
-                    setTimeout(() => {
-                        if (stripes.parentNode) {
-                            stripes.parentNode.removeChild(stripes);
-                        }
-                    }, 1500);
-                }
-            });
-        });
-
-        // Add CSS animation for racing stripes
-        if (!document.getElementById('racing-stripe-styles')) {
-            const style = document.createElement('style');
-            style.id = 'racing-stripe-styles';
-            style.textContent = `
-                @keyframes stripeMove {
-                    0% { left: -100%; }
-                    100% { left: 100%; }
-                }
-            `;
-            document.head.appendChild(style);
+    setupBackgroundAnimation() {
+        // Add subtle F1 racing animations
+        const body = document.body;
+        if (body) {
+            body.classList.add('f1-theme-loaded');
         }
     }
 }
 
-// Initialize application when DOM is loaded
-document.addEventListener('DOMContentLoaded', function () {
-    // Wait a bit for all elements to be rendered
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
-        // Initialize main predictor
         try {
             window.f1Predictor = new F1Predictor();
             console.log('✅ F1 Predictor initialized successfully');
@@ -447,7 +408,6 @@ document.addEventListener('DOMContentLoaded', function () {
             console.error('❌ Error initializing F1 Predictor:', error);
         }
 
-        // Initialize visual effects
         try {
             window.visualEffects = new VisualEffects();
             console.log('✅ Visual effects initialized successfully');
@@ -455,19 +415,9 @@ document.addEventListener('DOMContentLoaded', function () {
             console.error('❌ Error initializing visual effects:', error);
         }
 
-        // Add loading completion class for animations
         document.body.classList.add('loaded');
-
-        // Add welcome message in console
-        console.log(`
-    🏎️ F1 Monaco GP Predictor Loaded
-    ================================
-    Advanced ML-powered lap time prediction interface
-    Built with modern web technologies
-    Ready for race predictions!
-        `);
+        console.log('🏎️ F1 Monaco GP Predictor Ready!');
     }, 100);
 });
 
-// Export for potential external use
 window.F1Predictor = F1Predictor;
