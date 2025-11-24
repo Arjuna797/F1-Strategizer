@@ -1,26 +1,73 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, url_for
 import pickle
 import numpy as np
 import pandas as pd
 import random
 import traceback
+import sqlite3
+import datetime
+import os
+import json
 
+import matplotlib
+matplotlib.use('Agg')  # Use non-GUI backend to prevent tkinter issues
 import matplotlib.pyplot as plt
-from sklearn.metrics import mean_absolute_error
-from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.preprocessing import StandardScaler
 from sklearn.impute import SimpleImputer
+
+import os
 
 app = Flask(__name__)
 
+# Load secret keys and configurations from environment variables
+app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', 'default_dev_secret_key')  # replace in prod
+# Add further secret keys or API keys as needed
+# e.g. app.config['EXAMPLE_API_KEY'] = os.environ.get('EXAMPLE_API_KEY')
+
+# Note: It's important to keep these secrets out of source control by using environment variables.
+
+# Ensure static directory exists
+if not os.path.exists("static"):
+    os.makedirs("static")
+
+# Database setup
+DATABASE = 'f1.db'
+
+def get_db():
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def init_db():
+    with get_db() as conn:
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS predictions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT NOT NULL,
+                qualifying_time REAL,
+                rain_probability REAL,
+                temperature REAL,
+                team_performance REAL,
+                clean_air_pace REAL,
+                position_change REAL,
+                sector_time REAL,
+                predicted_lap_time REAL,
+                confidence REAL,
+                podium TEXT,
+                all_predictions TEXT
+            )
+        ''')
+        conn.commit()
+
+init_db()
+
+# Load model
 def load_model():
     try:
         with open('saved_model.pkl', 'rb') as f:
             return pickle.load(f)
-    except FileNotFoundError:
-        print("❌ Model file 'saved_model.pkl' not found!")
-        return None
     except Exception as e:
-        print(f"❌ Error loading model: {e}")
+        print("❌ Model load error:", e)
         return None
 
 MODEL_DATA = load_model()
@@ -31,19 +78,12 @@ if MODEL_DATA:
     imputer = MODEL_DATA['imputer']
     features = MODEL_DATA['features']
     racer_names = MODEL_DATA['racer_names']
-    AvgLapTime = MODEL_DATA.get('AvgLapTime', None)
-    
-    print("✅ Model loaded successfully!")
-    print("📊 Model keys:", MODEL_DATA.keys())
-    print("🏎️ Racers loaded:", racer_names)
-    print("⏱️ AvgLapTime:", AvgLapTime)
 else:
-    print("❌ No model loaded - using demo mode")
-    model = scaler = imputer = racer_names = None
+    model = scaler = imputer = None
     features = []
-    AvgLapTime = None
+    racer_names = []
 
-# Driver-team mapping (2024 F1 Season)
+# Driver mapping
 DRIVER_TEAMS = {
     'VER': 'Red Bull Racing', 'PER': 'Red Bull Racing',
     'NOR': 'McLaren', 'PIA': 'McLaren',
@@ -57,91 +97,126 @@ DRIVER_TEAMS = {
     'TSU': 'RB F1 Team', 'RIC': 'RB F1 Team'
 }
 
-# Base driver performance variations (simulate different driver skills)
+# More realistic driver variations
 DRIVER_VARIATIONS = {
-    'VER': -0.3, 'PER': -0.1, 'NOR': -0.2, 'PIA': -0.15, 
-    'LEC': -0.05, 'SAI': 0.05, 'RUS': 0.0, 'HAM': 0.1,
-    'ALO': 0.15, 'STR': 0.25, 'HUL': 0.3, 'MAG': 0.35,
-    'OCO': 0.2, 'GAS': 0.3, 'ALB': 0.4, 'SAR': 0.45,
-    'BOT': 0.25, 'ZHO': 0.35, 'TSU': 0.4, 'RIC': 0.2
+    'VER': -0.8, 'NOR': -0.5, 'LEC': -0.45, 'SAI': -0.40,
+    'HAM': -0.35, 'RUS': -0.32, 'PIA': -0.30, 'ALO': -0.25,
+    'PER': -0.22,
+    'STR': +0.15, 'OCO': +0.18, 'GAS': +0.22, 'RIC': +0.25,
+    'TSU': +0.28, 'ALB': +0.30,
+    'HUL': +0.45, 'MAG': +0.50, 'BOT': +0.55, 'ZHO': +0.60,
+    'SAR': +0.70
 }
 
-# Demo racers if no model is loaded
-DEMO_RACERS = ['VER', 'NOR', 'LEC', 'RUS', 'SAI', 'HAM', 'PIA', 'ALO']
+DEMO_RACERS = ['VER','NOR','LEC','RUS','SAI','HAM','PIA','ALO']
 
-def show_graph():
-    
-    df = pd.read_json('my_dataframe.json')
-    
-    print("IN GRAPH function")    
+# ⭐ NEW — Save graph instead of showing graph
+def show_graph(predictions=None):
+    try:
+        df = pd.read_json("my_dataframe.json")
 
-    # 9. Plot feature importances
-    plt.figure(figsize=(8, 5))
-    importances = model.feature_importances_
-    plt.barh(features, importances, color="skyblue")
-    plt.title("Feature Importance in Race Time Prediction")
-    plt.xlabel("Importance")
-    plt.tight_layout()
-    plt.show()
-    
-    
-    # 10. Plot Clean-Air Pace vs. Predicted Lap Time
-    final = df.sort_values("PredictedLapTime (s)").reset_index(drop=True)
-    plt.figure(figsize=(10, 6))
-    plt.scatter(final["CleanAirRacePace (s)"], final["PredictedLapTime (s)"], s=60)
-    for idx, driver in final.iterrows():
-        plt.annotate(driver["Driver"],
-                    (driver["CleanAirRacePace (s)"], driver["PredictedLapTime (s)"]),
-                    xytext=(5, 4), textcoords="offset points")
-    plt.title("Effect of Clean-Air Race Pace on Predicted Lap Time")
-    plt.xlabel("Clean-Air Race Pace (s)")
-    plt.ylabel("Predicted Lap Time (s)")
-    plt.tight_layout()
-    plt.show()
+        # Filter out rows with null values for trend line calculation
+        df_clean = df.dropna(subset=["QualifyingTime (s)", "PredictedLapTime (s)"])
+
+        # Save Lap Time Distribution Histogram
+        plt.figure(figsize=(10, 6))
+        plt.hist(df["PredictedLapTime (s)"], bins=20, alpha=0.7, color="#ffd700", edgecolor="#e10600")
+        plt.axvline(df["PredictedLapTime (s)"].mean(), color="#e10600", linestyle='--', linewidth=2, label=f'Mean: {df["PredictedLapTime (s)"].mean():.3f}s')
+        plt.title("Distribution of Predicted Lap Times", fontsize=14, fontweight='bold')
+        plt.xlabel("Predicted Lap Time (seconds)")
+        plt.ylabel("Frequency")
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+        plt.tight_layout()
+        plt.savefig("static/feature_importance.png")
+        plt.close()
+
+        # Save Qualifying Time vs Predicted Lap Time Scatter Plot
+        plt.figure(figsize=(10, 6))
+        scatter = plt.scatter(df["QualifyingTime (s)"], df["PredictedLapTime (s)"],
+                            c=df["TeamPerformanceScore"], cmap='viridis', s=80, alpha=0.8, edgecolors='black')
+
+        # Add trend line with error handling
+        try:
+            if len(df_clean) >= 2:  # Need at least 2 points for linear fit
+                z = np.polyfit(df_clean["QualifyingTime (s)"], df_clean["PredictedLapTime (s)"], 1)
+                p = np.poly1d(z)
+                x_trend = np.linspace(df_clean["QualifyingTime (s)"].min(), df_clean["QualifyingTime (s)"].max(), 100)
+                plt.plot(x_trend, p(x_trend), "r--", alpha=0.8, linewidth=2, label='Trend Line')
+            else:
+                print("⚠ Not enough data points for trend line")
+        except (np.linalg.LinAlgError, ValueError) as e:
+            print(f"⚠ Trend line calculation failed: {e}")
+            # Add a simple reference line instead
+            plt.axline((df["QualifyingTime (s)"].mean(), df["PredictedLapTime (s)"].mean()),
+                      slope=0, color='r', linestyle='--', alpha=0.8, linewidth=2, label='Mean Reference')
+
+        plt.colorbar(scatter, label='Team Performance Score')
+        plt.title("Qualifying Time vs Predicted Lap Time", fontsize=14, fontweight='bold')
+        plt.xlabel("Qualifying Time (seconds)")
+        plt.ylabel("Predicted Lap Time (seconds)")
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+        plt.tight_layout()
+        plt.savefig("static/pace_graph.png")
+        plt.close()
+
+        # Save Driver Performance Bar Chart if predictions are provided
+        if predictions:
+            plt.figure(figsize=(12, 6))
+            drivers = [p['driver'] for p in predictions[:8]]
+            times = [p['predicted_time'] for p in predictions[:8]]
+            colors = ['#e10600' if i < 3 else '#ffd700' for i in range(len(drivers))]  # Red for podium, gold for others
+            plt.bar(drivers, times, color=colors, alpha=0.8, edgecolor='black')
+            plt.title("Predicted Lap Times for Top 8 Drivers", fontsize=14, fontweight='bold')
+            plt.xlabel("Driver")
+            plt.ylabel("Predicted Lap Time (seconds)")
+            plt.xticks(rotation=45)
+            plt.grid(True, alpha=0.3, axis='y')
+            plt.tight_layout()
+            plt.savefig("static/driver_performance.png")
+            plt.close()
+
+        print("📊 New graphs saved successfully in /static")
+
+    except Exception as e:
+        print("⚠ Graph creation failed:", e)
 
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    firebase_api_key = os.environ.get('FIREBASE_API_KEY', 'your_default_firebase_api_key_here')
+    return render_template("index.html",
+                           feature_graph=url_for('static', filename='feature_importance.png'),
+                           pace_graph=url_for('static', filename='pace_graph.png'),
+                           driver_graph=url_for('static', filename='driver_performance.png'),
+                           firebase_api_key=firebase_api_key
+                           )
 
 @app.route('/predictor')
 def predictor():
-    return render_template('predictor.html')
+    return render_template("predictor.html",
+                           feature_graph=url_for('static', filename='feature_importance.png'),
+                           pace_graph=url_for('static', filename='pace_graph.png'),
+                           driver_graph=url_for('static', filename='driver_performance.png')
+                           )
 
-@app.route('/predict', methods=['POST'])
+
+@app.route('/predict', methods=["POST"])
 def predict():
     try:
-        print("🚀 Prediction request received")
-        
-        # Get request data
         data = request.get_json(force=True)
-        if not data:
-            return jsonify({
-                'success': False,
-                'error': 'No data received in request'
-            }), 400
-            
-        print("📊 Request data:", data)
-        
-        # Check required keys
-        required_keys = [
-            'qualifying_time', 'rain_probability', 'temperature',
-            'team_performance', 'clean_air_pace', 'position_change', 'sector_time'
-        ]
-        
-        missing = [k for k in required_keys if k not in data]
-        if missing:
-            return jsonify({
-                'success': False,
-                'error': f"Missing required fields: {', '.join(missing)}"
-            }), 400
 
-        # Use demo mode if no model is available
+        required = ['qualifying_time','rain_probability','temperature','team_performance',
+                    'clean_air_pace','position_change','sector_time']
+
+        for k in required:
+            if k not in data:
+                return jsonify(success=False, error=f"Missing {k}")
+
         if not MODEL_DATA:
-            print("⚠️ No model loaded - using demo mode")
-            return generate_demo_prediction(data)
+            return generate_demo(data)
 
-        # Map incoming JSON to DataFrame with correct column names
         base_input = {
             'QualifyingTime (s)': float(data['qualifying_time']),
             'RainProbability': float(data['rain_probability']) / 100.0,
@@ -151,169 +226,146 @@ def predict():
             'AveragePositionChange': float(data['position_change']),
             'TotalSectorTime (s)': float(data['sector_time'])
         }
-        
-        print("🔄 Base input created:", base_input)
 
-        # Generate predictions for all drivers
-        all_predictions = []
-        
-        current_racers = racer_names if racer_names else DEMO_RACERS
-        print(f"🏎️ Predicting for drivers: {current_racers}")
-        
-        for driver in current_racers:
-            try:
-                # Create driver-specific variations
-                driver_input = base_input.copy()
-                variation = DRIVER_VARIATIONS.get(driver, 0.0)
-                
-                # Apply driver-specific adjustments
-                driver_input['QualifyingTime (s)'] += variation
-                driver_input['CleanAirRacePace (s)'] += variation
-                driver_input['TotalSectorTime (s)'] += variation
-                
-                # Add some randomness for realistic variation
-                random_factor = random.uniform(-0.1, 0.1)
-                driver_input['QualifyingTime (s)'] += random_factor
-                
-                # Create DataFrame and make prediction
-                input_df = pd.DataFrame([driver_input], columns=features)
-                X_imp = imputer.transform(input_df)
-                X_scaled = scaler.transform(X_imp)
-                predicted_time = model.predict(X_scaled)[0]
-                
-                # Calculate confidence based on driver performance and conditions
-                base_confidence = 85.0
-                if driver in ['VER', 'NOR', 'LEC', 'PIA']: # Top drivers
-                    base_confidence = 90.0
-                elif driver in ['RUS', 'HAM', 'SAI']: # Mid-tier
-                    base_confidence = 87.0
-                
-                # Add variation based on conditions
-                if data['rain_probability'] > 50:
-                    base_confidence -= 3.0
-                if data['team_performance'] > 0.7:
-                    base_confidence += 2.0
-                
-                confidence = base_confidence + random.uniform(-2.0, 2.0)
-                confidence = max(82.0, min(95.0, confidence))
-                
-                all_predictions.append({
-                    'driver': driver,
-                    'team': DRIVER_TEAMS.get(driver, 'Unknown Team'),
-                    'predicted_time': float(predicted_time),
-                    'confidence': round(confidence, 1)
-                })
-                
-            except Exception as e:
-                print(f"❌ Error predicting for driver {driver}: {e}")
-                continue
+        predictions = []
+        drivers = racer_names if racer_names else DEMO_RACERS
 
-        if not all_predictions:
-            return jsonify({
-                'success': False,
-                'error': 'Failed to generate any predictions'
-            }), 500
+        for driver in drivers:
+            d_input = base_input.copy()
+            variation = DRIVER_VARIATIONS.get(driver, 0)
 
-        # Sort by predicted time to get podium
-        all_predictions.sort(key=lambda x: x['predicted_time'])
-        podium = all_predictions[:3]
+            for f in ['QualifyingTime (s)','CleanAirRacePace (s)','TotalSectorTime (s)']:
+                d_input[f] += variation
 
-        # Get the primary prediction (fastest lap time)
-        primary_time = podium[0]['predicted_time']
-        
-        print(f"✅ Predicted Time: {primary_time}")
-        print(f"🏆 Podium: {[(p['driver'], p['predicted_time']) for p in podium]}")
-        
-        show_graph()
-        
-        return jsonify({
-            'success': True,
-            'predicted_lap_time': round(primary_time, 3),
-            'confidence': podium[0]['confidence'],
-            'podium': podium,
-            'all_predictions': all_predictions[:8]  # Top 8 for extended view
-        })
+            d_input['QualifyingTime (s)'] += random.uniform(-0.35, 0.35)
+
+            df = pd.DataFrame([d_input], columns=features)
+            X_imp = imputer.transform(df)
+            X_scaled = scaler.transform(X_imp)
+            predicted_time = float(model.predict(X_scaled)[0])
+
+            if data['rain_probability'] > 50:
+                if driver in ['HAM','ALO','NOR']:
+                    predicted_time -= 0.25
+                if driver in ['STR','SAR','ZHO']:
+                    predicted_time += 0.40
+
+            conf = 85 + random.uniform(-3,3)
+
+            predictions.append({
+                'driver': driver,
+                'team': DRIVER_TEAMS.get(driver,"Team"),
+                'predicted_time': predicted_time,
+                'confidence': round(conf,1)
+            })
+
+        predictions.sort(key=lambda x: x['predicted_time'])
+        podium = predictions[:3]
+
+        # ⭐ Save prediction to database
+        with get_db() as conn:
+            conn.execute('''
+                INSERT INTO predictions (
+                    timestamp, qualifying_time, rain_probability, temperature,
+                    team_performance, clean_air_pace, position_change, sector_time,
+                    predicted_lap_time, confidence, podium, all_predictions
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                datetime.datetime.now().isoformat(),
+                data['qualifying_time'],
+                data['rain_probability'],
+                data['temperature'],
+                data['team_performance'],
+                data['clean_air_pace'],
+                data['position_change'],
+                data['sector_time'],
+                round(podium[0]['predicted_time'], 3),
+                podium[0]['confidence'],
+                json.dumps(podium),
+                json.dumps(predictions[:8])
+            ))
+            conn.commit()
+
+        # ⭐ Create graphs after each prediction request
+        show_graph(predictions=predictions[:8])
+
+        return jsonify(success=True,
+                       predicted_lap_time=round(podium[0]['predicted_time'],3),
+                       confidence=podium[0]['confidence'],
+                       podium=podium,
+                       all_predictions=predictions[:8],
+                       graph_feature=url_for('static', filename='feature_importance.png'),
+                       graph_pace=url_for('static', filename='pace_graph.png'),
+                       graph_driver=url_for('static', filename='driver_performance.png')
+                       )
 
     except Exception as e:
-        error_msg = str(e)
-        print(f"❌ Error in predict endpoint: {error_msg}")
-        print("🔍 Full traceback:")
         traceback.print_exc()
-        
-        return jsonify({
-            'success': False,
-            'error': f'Prediction failed: {error_msg}'
-        }), 500
+        return jsonify(success=False, error=str(e))
 
-def generate_demo_prediction(data):
-    """Generate demo predictions when no ML model is available"""
-    print("🎭 Generating demo predictions...")
-    
-    # Base lap time around Monaco GP typical times
-    base_time = 79.0 + random.uniform(-2.0, 2.0)
-    
-    # Generate predictions for demo drivers
-    all_predictions = []
-    for i, driver in enumerate(DEMO_RACERS):
-        # Add variation based on driver skill and request parameters
-        time_variation = DRIVER_VARIATIONS.get(driver, 0.0)
-        time_variation += (float(data.get('rain_probability', 20)) / 100.0) * random.uniform(-0.5, 0.5)
-        time_variation += (1.0 - float(data.get('team_performance', 0.7))) * random.uniform(0, 1.0)
-        
-        predicted_time = base_time + time_variation + random.uniform(-0.3, 0.3)
-        confidence = 85.0 + random.uniform(-5.0, 10.0)
-        confidence = max(80.0, min(95.0, confidence))
-        
-        all_predictions.append({
-            'driver': driver,
-            'team': DRIVER_TEAMS.get(driver, 'Demo Team'),
-            'predicted_time': float(predicted_time),
-            'confidence': round(confidence, 1)
+
+# DEMO MODE
+def generate_demo(data):
+    base_time = 79 + random.uniform(-2, 2)
+    preds = []
+
+    for d in DEMO_RACERS:
+        v = DRIVER_VARIATIONS.get(d, 0)
+        t = base_time + v + random.uniform(-0.5, 0.5)
+
+        preds.append({
+            "driver": d,
+            "team": DRIVER_TEAMS.get(d),
+            "predicted_time": t,
+            "confidence": round(85 + random.uniform(-5, 10), 1)
         })
-    
-    # Sort by predicted time
-    all_predictions.sort(key=lambda x: x['predicted_time'])
-    podium = all_predictions[:3]
-    primary_time = podium[0]['predicted_time']
-    
-    print(f"🎭 Demo Predicted Time: {primary_time}")
-    print(f"🎭 Demo Podium: {[(p['driver'], p['predicted_time']) for p in podium]}")
-    
-    return jsonify({
-        'success': True,
-        'predicted_lap_time': round(primary_time, 3),
-        'confidence': podium[0]['confidence'],
-        'podium': podium,
-        'all_predictions': all_predictions,
-        'demo_mode': True
-    })
 
-@app.route('/health', methods=['GET'])
+    preds.sort(key=lambda x: x['predicted_time'])
+    podium = preds[:3]
+
+    # ⭐ Save demo prediction to database
+    with get_db() as conn:
+        conn.execute('''
+            INSERT INTO predictions (
+                timestamp, qualifying_time, rain_probability, temperature,
+                team_performance, clean_air_pace, position_change, sector_time,
+                predicted_lap_time, confidence, podium, all_predictions
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            datetime.datetime.now().isoformat(),
+            data.get('qualifying_time', 0),
+            data.get('rain_probability', 0),
+            data.get('temperature', 0),
+            data.get('team_performance', 0),
+            data.get('clean_air_pace', 0),
+            data.get('position_change', 0),
+            data.get('sector_time', 0),
+            round(podium[0]['predicted_time'], 3),
+            podium[0]['confidence'],
+            json.dumps(podium),
+            json.dumps(preds)
+        ))
+        conn.commit()
+
+    show_graph(predictions=preds)
+
+    return jsonify(success=True, demo_mode=True,
+                   podium=podium,
+                   all_predictions=preds,
+                   graph_feature="static/feature_importance.png",
+                   graph_pace="static/pace_graph.png",
+                   graph_driver="static/driver_performance.png"
+                   )
+
+
+@app.route('/health')
 def health():
-    model_status = "loaded" if MODEL_DATA else "not_loaded"
-    return jsonify({
-        "status": "healthy",
-        "model_status": model_status,
-        "drivers_count": len(racer_names) if racer_names else len(DEMO_RACERS)
-    })
+    return jsonify(status="healthy", model_loaded=MODEL_DATA is not None)
 
-@app.route('/model-info', methods=['GET'])
-def model_info():
-    return jsonify({
-        "features": features if features else [],
-        "drivers": racer_names if racer_names else DEMO_RACERS,
-        "model_loaded": MODEL_DATA is not None
-    })
 
-# Add CORS headers for development
-@app.after_request
-def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-    return response
-
-if __name__ == '__main__':
-    print("🏎️ Starting F1 Monaco GP Predictor...")
-    print(f"📊 Model Status: {'✅ Loaded' if MODEL_DATA else '❌ Not Loaded (Demo Mode)'}")
-    app.run(host='0.0.0.0', port=5000, debug=True)
+if __name__ == "__main__":
+    print("🚀 Server running...")
+    # Disable debug mode if FLASK_ENV is set to 'production'
+    flask_env = os.environ.get('FLASK_ENV', 'development')
+    debug_mode = False if flask_env == 'production' else True
+    app.run(host="0.0.0.0", port=5000, debug=debug_mode)

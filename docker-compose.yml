@@ -1,0 +1,16 @@
+version: "3.9"
+
+services:
+  f1_predictor:
+    build: .
+    container_name: f1_predictor_app
+    ports:
+      - "40404:40404"
+    environment:
+      - FLASK_APP=app.py
+      - FLASK_DEBUG=1
+      - FLASK_RUN_HOST=0.0.0.0
+      - FLASK_RUN_PORT=40404
+    working_dir: /app
+    volumes:
+      - .:/app

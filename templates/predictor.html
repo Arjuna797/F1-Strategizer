@@ -995,6 +995,40 @@
                     <p class="results-note">Based on ML analysis of Monaco GP data</p>
                 </div>
             </div>
+
+            <!-- Graphs Section -->
+            <div class="graphs-section" style="margin-top: 2rem; text-align: center;">
+                <h3 style="color: var(--f1-gold); font-family: 'Orbitron', monospace; margin-bottom: 1rem;">📊 Analysis Graphs</h3>
+                <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 2rem;">
+                    <div style="flex: 1; min-width: 300px; max-width: 500px;">
+                        <h4 style="color: var(--f1-white); margin-bottom: 0.5rem;">Distribution of Predicted Lap Times</h4>
+                        <img src="{{ feature_graph }}" alt="Distribution of Predicted Lap Times Graph" style="width: 100%; border-radius: var(--radius-lg); border: 2px solid var(--f1-gold);">
+                        <p style="color: #ccc; font-size: 0.9rem; margin-top: 0.5rem; line-height: 1.4;">
+                            This histogram shows the distribution of predicted lap times across all drivers.
+                            The red vertical line indicates the mean lap time, providing insight into the overall
+                            performance spread in the Monaco GP under current race conditions.
+                        </p>
+                    </div>
+                    <div style="flex: 1; min-width: 300px; max-width: 500px;">
+                        <h4 style="color: var(--f1-white); margin-bottom: 0.5rem;">Qualifying Time vs Predicted Lap Time</h4>
+                        <img src="{{ pace_graph }}" alt="Pace Graph" style="width: 100%; border-radius: var(--radius-lg); border: 2px solid var(--f1-gold);">
+                        <p style="color: #ccc; font-size: 0.9rem; margin-top: 0.5rem; line-height: 1.4;">
+                            This scatter plot shows the relationship between qualifying times and predicted lap times.
+                            The color gradient represents team performance scores, with warmer colors indicating better teams.
+                            The red trend line reveals how qualifying performance typically predicts race lap times in Monaco GP.
+                        </p>
+                    </div>
+                    <div style="flex: 1; min-width: 300px; max-width: 500px;">
+                        <h4 style="color: var(--f1-white); margin-bottom: 0.5rem;">Predicted Lap Times for Top 8 Drivers</h4>
+                        <img src="{{ driver_graph }}" alt="Driver Performance Graph" style="width: 100%; border-radius: var(--radius-lg); border: 2px solid var(--f1-gold);">
+                        <p style="color: #ccc; font-size: 0.9rem; margin-top: 0.5rem; line-height: 1.4;">
+                            This bar chart displays the predicted lap times for the top 8 drivers based on current race conditions.
+                            Red bars represent the podium positions (1st, 2nd, 3rd), while gold bars show the remaining top performers.
+                            This visualization helps identify performance gaps and potential race outcomes.
+                        </p>
+                    </div>
+                </div>
+            </div>
         </section>
     </main>
 
@@ -1273,6 +1307,20 @@
                 // Format and display lap time
                 const formattedTime = parseFloat(prediction.lapTime).toFixed(3);
                 this.predictedTimeElement.textContent = `${formattedTime}s`;
+
+                // Update graph images with new generated graphs
+                if (prediction.graph_feature) {
+                    const featureImg = document.querySelector('img[alt="Distribution of Predicted Lap Times Graph"]');
+                    if (featureImg) featureImg.src = prediction.graph_feature;
+                }
+                if (prediction.graph_pace) {
+                    const paceImg = document.querySelector('img[alt="Pace Graph"]');
+                    if (paceImg) paceImg.src = prediction.graph_pace;
+                }
+                if (prediction.graph_driver) {
+                    const driverImg = document.querySelector('img[alt="Driver Performance Graph"]');
+                    if (driverImg) driverImg.src = prediction.graph_driver;
+                }
 
                 // Display podium if available
                 if (prediction.podium && prediction.podium.length >= 3) {

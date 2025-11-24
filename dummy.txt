@@ -1,0 +1,39 @@
+1.
+
+Name: Alex Turner
+
+Email: alex.turner.demo@example.com
+
+Password: Alex@12345
+
+2.
+
+Name: Priya Shah
+
+Email: priya.shah.demo@example.com
+
+Password: Priya#2024
+
+3.
+
+Name: Luca Martin
+
+Email: luca.martin.test@example.com
+
+Password: Luca*Test99
+
+4.
+
+Name: Emily Johnson
+
+Email: emily.johnson.fake@example.com
+
+Password: Emily!789
+
+5.
+
+Name: Rohan Kumar
+
+Email: rohan.kumar.project@example.com
+
+Password: RohanDemo@55

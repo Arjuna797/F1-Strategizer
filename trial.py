@@ -81,7 +81,9 @@ avg_pos_change = {
 qualifying["AveragePositionChange"] = qualifying["Driver"].map(avg_pos_change)
 
 # 3. Fetch weather data via WeatherAPI.com
-api_key = "4bf91261d9e9459abdb141320250108"
+import os
+
+api_key = os.environ.get('WEATHER_API_KEY', 'your_default_weather_api_key_here')
 lat, lon = 43.7384, 7.4246
 weather_url = (
     f"http://api.weatherapi.com/v1/forecast.json"
