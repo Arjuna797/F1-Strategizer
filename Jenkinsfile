@@ -132,6 +132,9 @@ spec:
                     dir('k8s-deployment') {
                         sh '''
                             kubectl apply -f deployment.yaml
+                            kubectl apply -f service.yaml
+                            kubectl apply -f ingress.yaml
+                            kubectl apply -f namespace.yaml
                             kubectl rollout status deployment/$APP_NAME -n <NAMESPACE>
                         '''
                     }
