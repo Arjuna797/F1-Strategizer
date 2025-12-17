@@ -11,7 +11,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy all files into the container
-COPY . .
+COPY app/ .
 
 # Expose Flask port
 EXPOSE 40404

@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: 2401076-f1strategizer
+  namespace: "2401076"
+  labels:
+    app: 2401076-f1strategizer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: 2401076-f1strategizer
+  template:
+    metadata:
+      labels:
+        app: 2401076-f1strategizer
+    spec:
+      imagePullSecrets:
+      - name: nexus-docker-secret
+      containers:
+      - name: f1strategizer-container
+        image: nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085/2401076-f1strategizer/2401076-f1strategizer:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 40404
+        env:
+        - name: FLASK_RUN_PORT
+          value: "40404"

@@ -1,0 +1,1488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F1 Monaco GP - Lap Time Predictor</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏎️</text></svg>">
+    
+    <!-- Custom Styles -->
+    <style>
+        /* ============================================
+           F1 MONACO GP PREDICTOR - COMPLETE STYLES
+           ============================================ */
+
+        /* CSS Variables for F1 Theme */
+        :root {
+            --f1-red: #e10600;
+            --f1-gold: #ffd700;
+            --f1-silver: #c0c0c0;
+            --f1-bronze: #cd7f32;
+            --f1-dark: #1a1a1a;
+            --f1-darker: #0d0d0d;
+            --f1-white: #ffffff;
+            --f1-gray: #666666;
+            --f1-blue: #00d2ff;
+            --f1-green: #4ade80;
+            
+            /* Gradients */
+            --gradient-dark: linear-gradient(135deg, rgba(26, 26, 26, 0.95), rgba(13, 13, 13, 0.98));
+            --gradient-gold: linear-gradient(135deg, #ffd700, #ffed4e);
+            --gradient-silver: linear-gradient(135deg, #c0c0c0, #e8e8e8);
+            --gradient-bronze: linear-gradient(135deg, #cd7f32, #daa520);
+            
+            /* Spacing */
+            --space-xs: 0.25rem;
+            --space-sm: 0.5rem;
+            --space-md: 1rem;
+            --space-lg: 1.5rem;
+            --space-xl: 2rem;
+            --space-2xl: 3rem;
+            
+            /* Border radius */
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 20px;
+        }
+
+        /* Global Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background: linear-gradient(135deg, #0d0d0d 0%, #1a1a1a 50%, #262626 100%);
+            color: var(--f1-white);
+            line-height: 1.6;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        body.loaded {
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Main Container */
+        .prediction-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--space-xl);
+        }
+
+        /* Header Styles */
+        .header {
+            text-align: center;
+            margin-bottom: var(--space-2xl);
+            padding: var(--space-xl) 0;
+        }
+
+        .main-title {
+            font-family: 'Orbitron', monospace;
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 900;
+            background: linear-gradient(45deg, var(--f1-gold), var(--f1-red));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: var(--space-md);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: #ccc;
+            font-weight: 400;
+        }
+
+        /* Form Styles */
+        .prediction-form {
+            background: var(--gradient-dark);
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            border-radius: var(--radius-xl);
+            padding: var(--space-2xl);
+            margin-bottom: var(--space-2xl);
+            backdrop-filter: blur(20px);
+        }
+
+        .form-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.8rem;
+            color: var(--f1-gold);
+            margin-bottom: var(--space-lg);
+            text-align: center;
+        }
+
+        .form-subtitle {
+            text-align: center;
+            color: #ccc;
+            margin-bottom: var(--space-2xl);
+        }
+
+        /* Parameter Groups */
+        .parameters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--space-xl);
+            margin-bottom: var(--space-2xl);
+        }
+
+        .parameter-group {
+            background: rgba(42, 42, 42, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-lg);
+            padding: var(--space-lg);
+            transition: all 0.3s ease;
+        }
+
+        .parameter-group:hover {
+            border-color: var(--f1-gold);
+            background: rgba(42, 42, 42, 0.7);
+        }
+
+        .parameter-label {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--f1-white);
+            margin-bottom: var(--space-md);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .parameter-value {
+            color: var(--f1-gold);
+            font-weight: 700;
+        }
+
+        /* Slider Styles */
+        .slider-container {
+            position: relative;
+            margin-bottom: var(--space-sm);
+        }
+
+        .slider-track {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .slider-track-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--f1-gold), var(--f1-red));
+            border-radius: 4px;
+            transition: width 0.3s ease;
+            width: 50%;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 8px;
+            background: transparent;
+            outline: none;
+            -webkit-appearance: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 2;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: var(--f1-gold);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+            transition: all 0.3s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: var(--f1-gold);
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+
+        /* Button Styles */
+        .form-actions {
+            display: flex;
+            gap: var(--space-lg);
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.1rem;
+            font-weight: 600;
+            padding: var(--space-lg) var(--space-2xl);
+            border: none;
+            border-radius: var(--radius-lg);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            min-width: 180px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--f1-gold), #ffed4e);
+            color: var(--f1-dark);
+            box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 215, 0, 0.4);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--f1-gold);
+            border: 2px solid var(--f1-gold);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: var(--f1-gold);
+            color: var(--f1-dark);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        /* Loading States */
+        .loading .btn-text {
+            display: none !important;
+        }
+
+        .loading .btn-loader {
+            display: block !important;
+        }
+
+        .btn-loader {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--f1-gold);
+            animation: spin 1s ease-in-out infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* ============================================
+           PODIUM RESULTS STYLING - MAIN SECTION
+           ============================================ */
+
+        .podium-results-container {
+            background: rgba(26, 26, 26, 0.98);
+            border: 3px solid var(--f1-gold);
+            border-radius: var(--radius-xl);
+            padding: var(--space-2xl);
+            margin: var(--space-2xl) auto;
+            text-align: center;
+            box-shadow: 
+                0 20px 60px rgba(0, 0, 0, 0.5),
+                0 0 0 1px rgba(255, 215, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            max-width: 800px;
+            width: 95%;
+            position: relative;
+            opacity: 0;
+            transform: translateY(50px);
+            transition: all 1s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+        }
+
+        .podium-results-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--f1-gold), transparent);
+            animation: shimmer 2s ease-in-out infinite;
+        }
+
+        @keyframes shimmer {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+
+        .podium-results-container.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .podium-results-title {
+            font-family: 'Orbitron', monospace;
+            color: var(--f1-gold);
+            font-size: clamp(1.5rem, 4vw, 2.2rem);
+            font-weight: 900;
+            margin-bottom: var(--space-2xl);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-align: center;
+            text-shadow: 
+                0 0 10px rgba(255, 215, 0, 0.5),
+                0 0 20px rgba(255, 215, 0, 0.2);
+            position: relative;
+            padding-bottom: var(--space-md);
+        }
+
+        .podium-results-title::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 3px;
+            background: var(--gradient-gold);
+            border-radius: 2px;
+        }
+
+        /* ============================================
+           PODIUM LIST AND ITEMS
+           ============================================ */
+
+        .podium-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-lg);
+            align-items: center;
+            justify-content: center;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 0;
+            list-style: none;
+        }
+
+        .podium-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(26, 26, 26, 0.98));
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-lg);
+            padding: var(--space-lg) var(--space-xl);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            backdrop-filter: blur(10px);
+            min-height: 100px;
+            opacity: 0;
+            transform: translateX(-50px);
+            animation: slideInLeft 0.8s ease-out forwards;
+            overflow: hidden;
+        }
+
+        .podium-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .podium-item:hover {
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+            border-color: rgba(255, 215, 0, 0.6);
+        }
+
+        .podium-item:hover::before {
+            background: var(--f1-gold);
+            box-shadow: 0 0 15px var(--f1-gold);
+        }
+
+        /* Position-specific styling */
+        .podium-item.first {
+            border-color: var(--f1-gold);
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(42, 42, 42, 0.95));
+            box-shadow: 
+                0 0 30px rgba(255, 215, 0, 0.3),
+                0 15px 30px rgba(0, 0, 0, 0.2);
+            transform: scale(1.05);
+            animation-delay: 0.1s;
+        }
+
+        .podium-item.second {
+            border-color: var(--f1-silver);
+            background: linear-gradient(135deg, rgba(192, 192, 192, 0.15), rgba(42, 42, 42, 0.95));
+            animation-delay: 0.3s;
+        }
+
+        .podium-item.third {
+            border-color: var(--f1-bronze);
+            background: linear-gradient(135deg, rgba(205, 127, 50, 0.15), rgba(42, 42, 42, 0.95));
+            animation-delay: 0.5s;
+        }
+
+        @keyframes slideInLeft {
+            0% {
+                opacity: 0;
+                transform: translateX(-50px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* ============================================
+           PODIUM POSITION CIRCLES
+           ============================================ */
+
+        .podium-position {
+            font-family: 'Orbitron', monospace;
+            font-size: 2rem;
+            font-weight: 900;
+            color: var(--f1-white);
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            border: 3px solid rgba(255, 255, 255, 0.2);
+            margin-right: var(--space-lg);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .podium-item.first .podium-position {
+            background: var(--gradient-gold);
+            color: var(--f1-dark);
+            border-color: var(--f1-gold);
+            box-shadow: 
+                0 0 20px rgba(255, 215, 0, 0.5),
+                0 0 40px rgba(255, 215, 0, 0.2);
+            font-size: 2.2rem;
+            width: 70px;
+            height: 70px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .podium-item.second .podium-position {
+            background: var(--gradient-silver);
+            color: var(--f1-dark);
+            border-color: var(--f1-silver);
+            box-shadow: 0 0 15px rgba(192, 192, 192, 0.3);
+        }
+
+        .podium-item.third .podium-position {
+            background: var(--gradient-bronze);
+            color: var(--f1-white);
+            border-color: var(--f1-bronze);
+            box-shadow: 0 0 15px rgba(205, 127, 50, 0.3);
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        /* ============================================
+           PODIUM INFO SECTION
+           ============================================ */
+
+        .podium-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            text-align: left;
+            margin: 0 var(--space-lg);
+            min-width: 0;
+        }
+
+        .podium-driver {
+            font-family: 'Orbitron', monospace;
+            font-size: clamp(1.2rem, 3vw, 1.6rem);
+            font-weight: 700;
+            color: var(--f1-white);
+            margin-bottom: var(--space-xs);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .podium-team {
+            font-size: 1.1rem;
+            color: #ccc;
+            font-weight: 500;
+            margin-bottom: var(--space-sm);
+            font-style: italic;
+            opacity: 0.9;
+            transition: opacity 0.3s ease;
+        }
+
+        .podium-item:hover .podium-team {
+            opacity: 1;
+            color: #fff;
+        }
+
+        .podium-time {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--f1-gold);
+            text-shadow: 
+                0 0 10px rgba(255, 215, 0, 0.4),
+                0 2px 4px rgba(0, 0, 0, 0.3);
+            margin-bottom: var(--space-xs);
+        }
+
+        /* ============================================
+           PODIUM STATS SECTION
+           ============================================ */
+
+        .podium-stats {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            text-align: right;
+            flex-shrink: 0;
+            gap: var(--space-sm);
+        }
+
+        .podium-confidence {
+            font-size: 1rem;
+            color: var(--f1-green);
+            font-weight: 600;
+            font-family: 'Orbitron', monospace;
+            text-shadow: 0 0 8px rgba(74, 222, 128, 0.3);
+        }
+
+        .confidence-badge {
+            background: rgba(74, 222, 128, 0.2);
+            border: 2px solid rgba(74, 222, 128, 0.4);
+            border-radius: 25px;
+            padding: var(--space-sm) var(--space-md);
+            font-size: 1.5rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+            transition: all 0.3s ease;
+            min-width: 50px;
+            height: 50px;
+        }
+
+        .podium-item:hover .confidence-badge {
+            background: rgba(74, 222, 128, 0.3);
+            border-color: rgba(74, 222, 128, 0.6);
+            transform: scale(1.1);
+        }
+
+        /* ============================================
+           PODIUM FOOTER
+           ============================================ */
+
+        .podium-footer {
+            margin-top: var(--space-xl);
+            padding-top: var(--space-lg);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            opacity: 0.7;
+        }
+
+        .podium-footer p {
+            font-size: 0.9rem;
+            color: #ccc;
+            font-style: italic;
+            margin: 0;
+        }
+
+        /* Demo Mode Badge */
+        .demo-badge {
+            background: rgba(255, 165, 0, 0.1);
+            border: 1px solid rgba(255, 165, 0, 0.3);
+            color: #ffa500;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            margin-top: 1rem;
+        }
+
+        /* Results Section */
+        .results-section {
+            margin-top: var(--space-2xl);
+            padding-top: var(--space-2xl);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .results-card {
+            background: var(--gradient-dark);
+            border: 2px solid var(--f1-gold);
+            border-radius: var(--radius-lg);
+            padding: var(--space-2xl);
+            text-align: center;
+            box-shadow:
+                0 8px 32px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            margin: 0 auto;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        .results-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.5rem;
+            color: var(--f1-gold);
+            margin-bottom: var(--space-lg);
+        }
+
+        .results-time {
+            font-family: 'Orbitron', monospace;
+            font-size: 3rem;
+            font-weight: 900;
+            color: var(--f1-white);
+            margin-bottom: var(--space-lg);
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+        }
+
+        .results-note {
+            color: #ccc;
+            font-style: italic;
+        }
+
+        /* Error Message Styling */
+        .error-message {
+            background: rgba(225, 6, 0, 0.1);
+            border: 2px solid rgba(225, 6, 0, 0.4);
+            border-radius: var(--radius-lg);
+            padding: var(--space-xl);
+            margin: var(--space-xl) auto;
+            max-width: 600px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            animation: slideDown 0.5s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .error-content h3 {
+            color: var(--f1-red);
+            font-family: 'Orbitron', monospace;
+            margin-bottom: var(--space-md);
+            font-size: 1.2rem;
+        }
+
+        .error-content p {
+            color: #fca5a5;
+            margin-bottom: var(--space-lg);
+            line-height: 1.5;
+        }
+
+        .error-close {
+            background: var(--f1-red);
+            color: white;
+            border: none;
+            padding: var(--space-sm) var(--space-lg);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .error-close:hover {
+            background: #c70500;
+            transform: translateY(-2px);
+        }
+
+        /* ============================================
+           UTILITY CLASSES
+           ============================================ */
+
+        .hidden {
+            display: none !important;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        .slide-up {
+            animation: slideUp 0.6s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ============================================
+           RESPONSIVE DESIGN
+           ============================================ */
+
+        @media (max-width: 768px) {
+            .prediction-container {
+                padding: var(--space-lg);
+            }
+
+            .parameters-grid {
+                grid-template-columns: 1fr;
+                gap: var(--space-lg);
+            }
+
+            .form-actions {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .btn {
+                width: 100%;
+                max-width: 300px;
+            }
+
+            .podium-results-container {
+                padding: var(--space-lg);
+                margin: var(--space-lg) auto;
+                width: 98%;
+            }
+
+            .podium-list {
+                max-width: 100%;
+                gap: var(--space-md);
+            }
+
+            .podium-item {
+                padding: var(--space-md) var(--space-lg);
+                flex-direction: row;
+                align-items: center;
+                min-height: 80px;
+            }
+
+            .podium-position {
+                width: 50px;
+                height: 50px;
+                font-size: 1.5rem;
+                margin-right: var(--space-md);
+            }
+
+            .podium-item.first .podium-position {
+                width: 55px;
+                height: 55px;
+                font-size: 1.7rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .podium-item {
+                flex-direction: column;
+                text-align: center;
+                gap: var(--space-md);
+                padding: var(--space-lg);
+            }
+
+            .podium-position {
+                margin-right: 0;
+                margin-bottom: var(--space-sm);
+            }
+
+            .podium-info {
+                align-items: center;
+                text-align: center;
+                margin: 0;
+            }
+
+            .podium-stats {
+                align-items: center;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Main Container -->
+    <main class="prediction-container">
+        <!-- Header -->
+        <header class="header">
+            <h1 class="main-title">🏎️ F1 Monaco GP Predictor</h1>
+            <p class="subtitle">Advanced Machine Learning Race Time Prediction</p>
+        </header>
+
+        <!-- Prediction Form -->
+        <section class="prediction-form">
+            <h2 class="form-title">Race Parameters</h2>
+            <p class="form-subtitle">Adjust the sliders to predict lap times</p>
+
+            <form id="predictionForm">
+                <div class="parameters-grid">
+                    <!-- Qualifying Time -->
+                    <div class="parameter-group">
+                        <label class="parameter-label">
+                            Qualifying Time
+                            <span class="parameter-value" id="qualifying_time_value">70.5s</span>
+                        </label>
+                        <div class="slider-container">
+                            <div class="slider-track">
+                                <div class="slider-track-fill"></div>
+                            </div>
+                            <input type="range" id="qualifying_time" min="69.0" max="73.0" step="0.1" value="70.5">
+                        </div>
+                    </div>
+
+                    <!-- Rain Probability -->
+                    <div class="parameter-group">
+                        <label class="parameter-label">
+                            Rain Probability
+                            <span class="parameter-value" id="rain_probability_value">20%</span>
+                        </label>
+                        <div class="slider-container">
+                            <div class="slider-track">
+                                <div class="slider-track-fill"></div>
+                            </div>
+                            <input type="range" id="rain_probability" min="0" max="100" step="1" value="20">
+                        </div>
+                    </div>
+
+                    <!-- Temperature -->
+                    <div class="parameter-group">
+                        <label class="parameter-label">
+                            Temperature
+                            <span class="parameter-value" id="temperature_value">25°C</span>
+                        </label>
+                        <div class="slider-container">
+                            <div class="slider-track">
+                                <div class="slider-track-fill"></div>
+                            </div>
+                            <input type="range" id="temperature" min="15" max="40" step="1" value="25">
+                        </div>
+                    </div>
+
+                    <!-- Team Performance Score -->
+                    <div class="parameter-group">
+                        <label class="parameter-label">
+                            Team Performance Score
+                            <span class="parameter-value" id="team_performance_value">0.70</span>
+                        </label>
+                        <div class="slider-container">
+                            <div class="slider-track">
+                                <div class="slider-track-fill"></div>
+                            </div>
+                            <input type="range" id="team_performance" min="0.0" max="1.0" step="0.01" value="0.70">
+                        </div>
+                    </div>
+
+                    <!-- Clean Air Race Pace -->
+                    <div class="parameter-group">
+                        <label class="parameter-label">
+                            Clean Air Race Pace
+                            <span class="parameter-value" id="clean_air_pace_value">94.0s</span>
+                        </label>
+                        <div class="slider-container">
+                            <div class="slider-track">
+                                <div class="slider-track-fill"></div>
+                            </div>
+                            <input type="range" id="clean_air_pace" min="90.0" max="100.0" step="0.1" value="94.0">
+                        </div>
+                    </div>
+
+                    <!-- Average Position Change -->
+                    <div class="parameter-group">
+                        <label class="parameter-label">
+                            Average Position Change
+                            <span class="parameter-value" id="position_change_value">0.0</span>
+                        </label>
+                        <div class="slider-container">
+                            <div class="slider-track">
+                                <div class="slider-track-fill"></div>
+                            </div>
+                            <input type="range" id="position_change" min="-3.0" max="3.0" step="0.1" value="0.0">
+                        </div>
+                    </div>
+
+                    <!-- Total Sector Time -->
+                    <div class="parameter-group">
+                        <label class="parameter-label">
+                            Total Sector Time
+                            <span class="parameter-value" id="sector_time_value">95.0s</span>
+                        </label>
+                        <div class="slider-container">
+                            <div class="slider-track">
+                                <div class="slider-track-fill"></div>
+                            </div>
+                            <input type="range" id="sector_time" min="90.0" max="100.0" step="0.1" value="95.0">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="form-actions">
+                    <button type="button" id="resetBtn" class="btn btn-secondary">
+                        <span class="btn-text">Reset Values</span>
+                    </button>
+                    <button type="submit" id="predictBtn" class="btn btn-primary">
+                        <span class="btn-text">Predict Lap Time</span>
+                        <div class="btn-loader"></div>
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Results Section (Hidden by default) -->
+        <section id="resultsSection" class="results-section hidden">
+            <div class="results-card">
+                <div class="results-header">
+                    <h3 class="results-title">🎯 Predicted Lap Time</h3>
+                </div>
+                <div class="results-time" id="predictedTime">--.-s</div>
+                <div class="results-info">
+                    <p class="results-note">Based on ML analysis of Monaco GP data</p>
+                </div>
+            </div>
+
+            <!-- Graphs Section -->
+            <div class="graphs-section" style="margin-top: 2rem; text-align: center;">
+                <h3 style="color: var(--f1-gold); font-family: 'Orbitron', monospace; margin-bottom: 1rem;">📊 Analysis Graphs</h3>
+                <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 2rem;">
+                    <div style="flex: 1; min-width: 300px; max-width: 500px;">
+                        <h4 style="color: var(--f1-white); margin-bottom: 0.5rem;">Distribution of Predicted Lap Times</h4>
+                        <img src="{{ feature_graph }}" alt="Distribution of Predicted Lap Times Graph" style="width: 100%; border-radius: var(--radius-lg); border: 2px solid var(--f1-gold);">
+                        <p style="color: #ccc; font-size: 0.9rem; margin-top: 0.5rem; line-height: 1.4;">
+                            This histogram shows the distribution of predicted lap times across all drivers.
+                            The red vertical line indicates the mean lap time, providing insight into the overall
+                            performance spread in the Monaco GP under current race conditions.
+                        </p>
+                    </div>
+                    <div style="flex: 1; min-width: 300px; max-width: 500px;">
+                        <h4 style="color: var(--f1-white); margin-bottom: 0.5rem;">Qualifying Time vs Predicted Lap Time</h4>
+                        <img src="{{ pace_graph }}" alt="Pace Graph" style="width: 100%; border-radius: var(--radius-lg); border: 2px solid var(--f1-gold);">
+                        <p style="color: #ccc; font-size: 0.9rem; margin-top: 0.5rem; line-height: 1.4;">
+                            This scatter plot shows the relationship between qualifying times and predicted lap times.
+                            The color gradient represents team performance scores, with warmer colors indicating better teams.
+                            The red trend line reveals how qualifying performance typically predicts race lap times in Monaco GP.
+                        </p>
+                    </div>
+                    <div style="flex: 1; min-width: 300px; max-width: 500px;">
+                        <h4 style="color: var(--f1-white); margin-bottom: 0.5rem;">Predicted Lap Times for Top 8 Drivers</h4>
+                        <img src="{{ driver_graph }}" alt="Driver Performance Graph" style="width: 100%; border-radius: var(--radius-lg); border: 2px solid var(--f1-gold);">
+                        <p style="color: #ccc; font-size: 0.9rem; margin-top: 0.5rem; line-height: 1.4;">
+                            This bar chart displays the predicted lap times for the top 8 drivers based on current race conditions.
+                            Red bars represent the podium positions (1st, 2nd, 3rd), while gold bars show the remaining top performers.
+                            This visualization helps identify performance gaps and potential race outcomes.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- JavaScript -->
+    <script>
+        console.log('🏎️ F1 Predictor Loading...');
+
+        class F1Predictor {
+            constructor() {
+                this.initializeElements();
+                this.setupEventListeners();
+                this.initializeSliders();
+                console.log('✅ F1Predictor initialized');
+            }
+
+            initializeElements() {
+                // Form elements
+                this.form = document.getElementById('predictionForm');
+                this.resetBtn = document.getElementById('resetBtn');
+                this.predictBtn = document.getElementById('predictBtn');
+                this.resultsSection = document.getElementById('resultsSection');
+                this.predictedTimeElement = document.getElementById('predictedTime');
+
+                // Button states
+                this.btnText = this.predictBtn?.querySelector('.btn-text');
+                this.btnLoader = this.predictBtn?.querySelector('.btn-loader');
+
+                // Slider configuration with defaults
+                this.sliderConfig = {
+                    qualifying_time: { min: 69.0, max: 73.0, default: 70.5, unit: 's', decimals: 1 },
+                    rain_probability: { min: 0, max: 100, default: 20, unit: '%', decimals: 0 },
+                    temperature: { min: 15, max: 40, default: 25, unit: '°C', decimals: 0 },
+                    team_performance: { min: 0.0, max: 1.0, default: 0.70, unit: '', decimals: 2 },
+                    clean_air_pace: { min: 90.0, max: 100.0, default: 94.0, unit: 's', decimals: 1 },
+                    position_change: { min: -3.0, max: 3.0, default: 0.0, unit: '', decimals: 1 },
+                    sector_time: { min: 90.0, max: 100.0, default: 95.0, unit: 's', decimals: 1 }
+                };
+
+                // Get all sliders
+                this.sliders = {};
+                Object.keys(this.sliderConfig).forEach(name => {
+                    const input = document.getElementById(name);
+                    const valueDisplay = document.getElementById(`${name}_value`);
+                    const parameterGroup = input?.closest('.parameter-group');
+                    const trackFill = parameterGroup?.querySelector('.slider-track-fill');
+
+                    if (input && valueDisplay && trackFill) {
+                        this.sliders[name] = {
+                            input: input,
+                            valueDisplay: valueDisplay,
+                            trackFill: trackFill
+                        };
+                    } else {
+                        console.error(`❌ Missing elements for slider: ${name}`);
+                    }
+                });
+
+                console.log('📊 Sliders initialized:', Object.keys(this.sliders));
+            }
+
+            setupEventListeners() {
+                // Form submission
+                if (this.form) {
+                    this.form.addEventListener('submit', (e) => {
+                        e.preventDefault();
+                        this.handlePredict(e);
+                    });
+                }
+
+                // Reset button
+                if (this.resetBtn) {
+                    this.resetBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        this.resetValues();
+                    });
+                }
+
+                // Predict button
+                if (this.predictBtn) {
+                    this.predictBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        this.handlePredict(e);
+                    });
+                }
+
+                // Slider events
+                Object.keys(this.sliders).forEach(name => {
+                    const slider = this.sliders[name];
+                    if (slider && slider.input) {
+                        slider.input.addEventListener('input', () => this.updateSlider(name));
+                        slider.input.addEventListener('change', () => this.updateSlider(name));
+                    }
+                });
+
+                console.log('🎮 Event listeners set up');
+            }
+
+            initializeSliders() {
+                Object.keys(this.sliderConfig).forEach(name => {
+                    const config = this.sliderConfig[name];
+                    const slider = this.sliders[name];
+                    if (slider && slider.input) {
+                        slider.input.value = config.default;
+                        this.updateSlider(name);
+                    }
+                });
+                console.log('⚙️ Sliders initialized with default values');
+            }
+
+            updateSlider(name) {
+                const config = this.sliderConfig[name];
+                const slider = this.sliders[name];
+                
+                if (!config || !slider || !slider.input || !slider.valueDisplay || !slider.trackFill) {
+                    return;
+                }
+
+                const value = parseFloat(slider.input.value);
+                const formattedValue = value.toFixed(config.decimals);
+                slider.valueDisplay.textContent = `${formattedValue}${config.unit}`;
+
+                const percentage = ((value - config.min) / (config.max - config.min)) * 100;
+                slider.trackFill.style.width = `${Math.max(0, Math.min(100, percentage))}%`;
+            }
+
+            resetValues() {
+                console.log('🔄 Resetting values...');
+                Object.keys(this.sliders).forEach(name => {
+                    const config = this.sliderConfig[name];
+                    const slider = this.sliders[name];
+                    if (slider && slider.input && config) {
+                        slider.input.value = config.default;
+                        this.updateSlider(name);
+                    }
+                });
+                
+                // Hide results section
+                if (this.resultsSection) {
+                    this.resultsSection.classList.add('hidden');
+                }
+                
+                // Remove podium section if exists
+                const podiumSection = document.getElementById('podiumResultsSection');
+                if (podiumSection) {
+                    podiumSection.remove();
+                }
+                
+                console.log('✅ Values reset to defaults');
+            }
+
+            setLoadingState(loading) {
+                if (this.predictBtn) {
+                    this.predictBtn.disabled = loading;
+                    this.predictBtn.classList.toggle('loading', loading);
+                }
+                
+                if (this.btnText && this.btnLoader) {
+                    this.btnText.style.display = loading ? 'none' : 'block';
+                    this.btnLoader.style.display = loading ? 'block' : 'none';
+                }
+                
+                console.log(`⏳ Loading state: ${loading ? 'ON' : 'OFF'}`);
+            }
+
+            async delay(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+
+            async handlePredict(e) {
+                if (e) {
+                    e.preventDefault();
+                }
+
+                console.log('🚀 Starting prediction...');
+                this.setLoadingState(true);
+
+                try {
+                    const formData = this.getFormData();
+                    console.log('📊 Form data:', formData);
+                    
+                    // Validate data
+                    if (!this.validateFormData(formData)) {
+                        throw new Error('Invalid form data');
+                    }
+                    
+                    await this.delay(800);
+                    
+                    const prediction = await this.callMLPrediction(formData);
+                    console.log('✅ Received prediction:', prediction);
+                    
+                    this.displayResults(prediction);
+                } catch (error) {
+                    console.error('❌ Prediction error:', error);
+                    this.showError(`Prediction failed: ${error.message}`);
+                } finally {
+                    this.setLoadingState(false);
+                }
+            }
+
+            validateFormData(data) {
+                const required = ['qualifying_time', 'rain_probability', 'temperature', 'team_performance', 'clean_air_pace', 'position_change', 'sector_time'];
+                for (let key of required) {
+                    if (data[key] === undefined || data[key] === null || isNaN(data[key])) {
+                        console.error(`❌ Invalid data for ${key}:`, data[key]);
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            getFormData() {
+                const data = {};
+                Object.keys(this.sliders).forEach(name => {
+                    if (this.sliders[name] && this.sliders[name].input) {
+                        data[name] = parseFloat(this.sliders[name].input.value);
+                    }
+                });
+                return data;
+            }
+
+            async callMLPrediction(data) {
+                console.log('🌐 Making API call to /predict');
+                
+                try {
+                    const response = await fetch('/predict', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify(data)
+                    });
+
+                    console.log(`📡 Response status: ${response.status}`);
+
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error('❌ Response error:', errorText);
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}. ${errorText}`);
+                    }
+
+                    const responseData = await response.json();
+                    console.log('📨 Response data:', responseData);
+                    
+                    if (!responseData.success) {
+                        throw new Error(responseData.error || 'Prediction failed - server returned success: false');
+                    }
+
+                    return {
+                        lapTime: responseData.predicted_lap_time,
+                        confidence: responseData.confidence,
+                        podium: responseData.podium || [],
+                        allPredictions: responseData.all_predictions || [],
+                        demoMode: responseData.demo_mode || false
+                    };
+                } catch (error) {
+                    console.error('🔥 API call failed:', error);
+                    
+                    // Check if it's a network error
+                    if (error instanceof TypeError && error.message.includes('fetch')) {
+                        throw new Error('Unable to connect to server. Please check if the Flask app is running on http://localhost:5000');
+                    }
+                    
+                    throw error;
+                }
+            }
+
+            async displayResults(prediction) {
+                if (!this.predictedTimeElement || !this.resultsSection) {
+                    console.error('❌ Results elements not found');
+                    return;
+                }
+
+                console.log('🎯 Displaying results...');
+
+                // Format and display lap time
+                const formattedTime = parseFloat(prediction.lapTime).toFixed(3);
+                this.predictedTimeElement.textContent = `${formattedTime}s`;
+
+                // Update graph images with new generated graphs
+                if (prediction.graph_feature) {
+                    const featureImg = document.querySelector('img[alt="Distribution of Predicted Lap Times Graph"]');
+                    if (featureImg) featureImg.src = prediction.graph_feature;
+                }
+                if (prediction.graph_pace) {
+                    const paceImg = document.querySelector('img[alt="Pace Graph"]');
+                    if (paceImg) paceImg.src = prediction.graph_pace;
+                }
+                if (prediction.graph_driver) {
+                    const driverImg = document.querySelector('img[alt="Driver Performance Graph"]');
+                    if (driverImg) driverImg.src = prediction.graph_driver;
+                }
+
+                // Display podium if available
+                if (prediction.podium && prediction.podium.length >= 3) {
+                    console.log('🏆 Displaying podium:', prediction.podium);
+                    this.displayPodiumResults(prediction.podium, prediction.demoMode);
+                } else {
+                    console.warn('⚠️ No podium data available');
+                }
+
+                // Show results section
+                this.resultsSection.classList.remove('hidden');
+
+                // Scroll to results
+                setTimeout(() => {
+                    this.resultsSection.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center'
+                    });
+                }, 300);
+
+                console.log('✅ Results displayed successfully');
+            }
+
+            displayPodiumResults(podium, demoMode = false) {
+                console.log('🏁 Creating podium display for:', podium);
+                
+                // Remove existing podium section if it exists
+                const existingPodium = document.getElementById('podiumResultsSection');
+                if (existingPodium) {
+                    existingPodium.remove();
+                }
+
+                // Create new podium section
+                const podiumSection = this.createPodiumSection(podium, demoMode);
+                
+                // Insert podium section before results
+                const resultsSection = document.getElementById('resultsSection');
+                if (resultsSection && resultsSection.parentNode) {
+                    resultsSection.parentNode.insertBefore(podiumSection, resultsSection);
+                } else {
+                    // Fallback: append to main container
+                    const mainContainer = document.querySelector('.prediction-container') || 
+                                         document.querySelector('main') || 
+                                         document.body;
+                    mainContainer.appendChild(podiumSection);
+                }
+
+                // Animate podium appearance
+                setTimeout(() => {
+                    podiumSection.classList.add('visible');
+                }, 100);
+
+                console.log('🏆 Podium display created and animated');
+            }
+
+            createPodiumSection(podium, demoMode = false) {
+                const section = document.createElement('div');
+                section.id = 'podiumResultsSection';
+                section.className = 'podium-results-container';
+                
+                const top3 = podium.slice(0, 3);
+                const positionClasses = ['first', 'second', 'third'];
+                const positionNumbers = ['1', '2', '3'];
+                const medals = ['🥇', '🥈', '🥉'];
+
+                section.innerHTML = `
+                    <div class="podium-results-title">
+                        🏆 RACE PODIUM PREDICTION
+                    </div>
+                    <div class="podium-list">
+                        ${top3.map((driver, index) => `
+                            <div class="podium-item ${positionClasses[index]}" data-position="${index + 1}">
+                                <div class="podium-position">${positionNumbers[index]}</div>
+                                <div class="podium-info">
+                                    <div class="podium-driver">${driver.driver}</div>
+                                    <div class="podium-team">${driver.team}</div>
+                                    <div class="podium-time">${this.formatLapTime(driver.predicted_time)}</div>
+                                </div>
+                                <div class="podium-stats">
+                                    <div class="podium-confidence">${driver.confidence}%</div>
+                                    <div class="confidence-badge">${medals[index]}</div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="podium-footer">
+                        <p>🎯 ${demoMode ? 'Demo Mode: ' : ''}ML-powered predictions based on current race conditions</p>
+                        ${demoMode ? '<div class="demo-badge">🎭 Demo Mode - No ML Model Loaded</div>' : ''}
+                    </div>
+                `;
+
+                return section;
+            }
+
+            formatLapTime(seconds) {
+                return `${parseFloat(seconds).toFixed(3)}s`;
+            }
+
+            showError(message) {
+                console.error('🚨 Showing error:', message);
+                
+                // Remove existing error if any
+                const existingError = document.getElementById('errorMessage');
+                if (existingError) {
+                    existingError.remove();
+                }
+
+                // Create error div
+                const errorDiv = document.createElement('div');
+                errorDiv.id = 'errorMessage';
+                errorDiv.className = 'error-message';
+                
+                errorDiv.innerHTML = `
+                    <div class="error-content">
+                        <h3>⚠️ Prediction Error</h3>
+                        <p>${message}</p>
+                        <button onclick="this.parentElement.parentElement.remove()" class="error-close">Close</button>
+                    </div>
+                `;
+                
+                // Insert before results section
+                const resultsSection = document.getElementById('resultsSection');
+                if (resultsSection && resultsSection.parentNode) {
+                    resultsSection.parentNode.insertBefore(errorDiv, resultsSection);
+                } else {
+                    const mainContainer = document.querySelector('.prediction-container') || document.body;
+                    mainContainer.appendChild(errorDiv);
+                }
+                
+                errorDiv.style.display = 'block';
+                
+                // Auto-hide error after 8 seconds
+                setTimeout(() => {
+                    if (errorDiv && errorDiv.parentNode) {
+                        errorDiv.remove();
+                    }
+                }, 8000);
+
+                // Scroll to error
+                errorDiv.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center'
+                });
+            }
+        }
+
+        // Initialize when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🌟 DOM Content Loaded');
+            setTimeout(() => {
+                try {
+                    window.f1Predictor = new F1Predictor();
+                    console.log('✅ F1 Predictor initialized successfully');
+                } catch (error) {
+                    console.error('❌ Error initializing F1 Predictor:', error);
+                    alert('Failed to initialize F1 Predictor. Please check the console for details.');
+                }
+
+                document.body.classList.add('loaded');
+                console.log('🏎️ F1 Monaco GP Predictor Ready!');
+            }, 100);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: 2401076-f1strategizer
+  namespace: "2401076"
+spec:
+  selector:
+    app: 2401076-f1strategizer
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 40404
+  type: ClusterIP
