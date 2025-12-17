@@ -83,7 +83,6 @@ spec:
             }
         }
 
-        /*
         stage('SonarQube Analysis') {
             steps {
                 container('sonar-scanner') {
@@ -101,7 +100,6 @@ spec:
                 }
             }
         }
-        */
 
         stage('Login to Docker Registry') {
             steps {
