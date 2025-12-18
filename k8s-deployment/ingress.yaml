@@ -4,9 +4,8 @@ metadata:
   name: f1strategizer-2401076-ingress
   namespace: "2401076"
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
+    kubernetes.io/ingress.class: nginx
 spec:
-  rules:
   rules:
   - host: f1strategizer.imcc.com
     http:
