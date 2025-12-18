@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: 2401076-f1strategizer
+  name: f1strategizer-2401076
   namespace: "2401076"
 spec:
   selector:
-    app: 2401076-f1strategizer
+    app: f1strategizer-2401076
   ports:
   - protocol: TCP
     port: 80

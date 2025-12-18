@@ -1,25 +1,25 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: 2401076-f1strategizer
+  name: f1strategizer-2401076
   namespace: "2401076"
   labels:
-    app: 2401076-f1strategizer
+    app: f1strategizer-2401076
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: 2401076-f1strategizer
+      app: f1strategizer-2401076
   template:
     metadata:
       labels:
-        app: 2401076-f1strategizer
+        app: f1strategizer-2401076
     spec:
       imagePullSecrets:
       - name: nexus-docker-secret
       containers:
       - name: f1strategizer-container
-        image: 127.0.0.1:30085/2401076-f1strategizer/2401076-f1strategizer:latest
+        image: 127.0.0.1:30085/2401076-f1strategizer/f1strategizer-2401076:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 40404

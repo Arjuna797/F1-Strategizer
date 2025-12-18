@@ -50,7 +50,7 @@ spec:
     }
 
     environment {
-        APP_NAME        = "2401076-f1strategizer"
+        APP_NAME        = "f1strategizer-2401076"
         IMAGE_TAG       = "latest"
         REGISTRY_URL    = "nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085"
         REGISTRY_REPO   = "2401076-f1strategizer"

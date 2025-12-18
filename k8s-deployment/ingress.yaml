@@ -1,7 +1,7 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: 2401076-f1strategizer-ingress
+  name: f1strategizer-2401076-ingress
   namespace: "2401076"
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
@@ -14,6 +14,6 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: 2401076-f1strategizer
+            name: f1strategizer-2401076
             port:
               number: 80
