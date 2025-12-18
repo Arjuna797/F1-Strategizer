@@ -86,17 +86,13 @@ spec:
         stage('SonarQube Analysis') {
             steps {
                 container('sonar-scanner') {
-                    withCredentials([
-                        string(credentialsId: 'sonar-token-2401076', variable: 'SONAR_TOKEN')
-                    ]) {
-                        sh '''
-                            sonar-scanner \
-                              -Dsonar.projectKey=$SONAR_PROJECT \
-                              -Dsonar.host.url=$SONAR_HOST_URL \
-                              -Dsonar.login=$SONAR_TOKEN \
-                              -Dsonar.python.coverage.reportPaths=coverage.xml
-                        '''
-                    }
+                    sh '''
+                        sonar-scanner \
+                          -Dsonar.projectKey=$SONAR_PROJECT \
+                          -Dsonar.host.url=$SONAR_HOST_URL \
+                          -Dsonar.login=sqa_ee7f8a3e23eda67682b6b2d28b3d7239dff840fb \
+                          -Dsonar.python.coverage.reportPaths=coverage.xml
+                    '''
                 }
             }
         }
