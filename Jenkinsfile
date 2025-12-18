@@ -132,6 +132,11 @@ spec:
                             kubectl apply -f service.yaml
                             kubectl apply -f ingress.yaml
                             kubectl rollout status deployment/$APP_NAME -n 2401076
+                            echo "Deployment successfully rolled out."
+                            echo "Fetching Ingress details..."
+                            kubectl get ingress -n 2401076
+                            kubectl get svc -n 2401076
+                            kubectl describe ingress f1strategizer-2401076-ingress -n 2401076
                         '''
                     }
                 }
