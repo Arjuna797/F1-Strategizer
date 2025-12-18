@@ -7,8 +7,9 @@ metadata:
     nginx.ingress.kubernetes.io/rewrite-target: /
 spec:
   rules:
-  - http:
-    - host: f1strategizer.imcc.com
+  rules:
+  - host: f1strategizer.imcc.com
+    http:
       paths:
       - path: /
         pathType: Prefix
